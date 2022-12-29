@@ -11,6 +11,8 @@
   "dependencies": {
     "create-expo-app": "^1.1.4",
     "expo": "^47.0.9",
+    "expo-camera": "^13.1.0",
+    "expo-media-library": "^15.0.0",
     "expo-status-bar": "~1.4.2",
     "react": "18.1.0",
     "react-native": "0.70.5"
