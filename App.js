@@ -7,8 +7,12 @@ import * as MediaLibrary from 'expo-media-library';
 import Button from './src/components/Button';
 import axios from 'axios';
 
+const b64toBlob = (base64, type = 'application/octet-stream') => 
+  fetch(`data:${type};base64,${base64}`).then(res => res.blob())
+
 const sendImage = async (image) => {
-  console.log("here: ", image)
+  console.log("here")
+  console.log(image)
   const formData = new FormData();
   formData.append('image', {
     uri: image.uri,
@@ -18,6 +22,7 @@ const sendImage = async (image) => {
 
   let data
 
+  /*
   try {
     const response = await fetch('https://lnatchxqed.execute-api.us-east-1.amazonaws.com/roadDataReciever?fileName=' + image.uri, {
       method: 'GET',
@@ -56,6 +61,12 @@ const sendImage = async (image) => {
   } catch(e) {
     console.log("failed to upload image to s3: ", e)
   }
+  */
+ try {
+
+ } catch {
+
+ }
 };
 
 
@@ -73,7 +84,8 @@ export default function App() {
       MediaLibrary.requestPermissionsAsync();
       const cameraStatus = await Camera.requestCameraPermissionsAsync();
       setHasCameraPermission(cameraStatus.status === 'granted');
-      console.log("requesting location permission")
+      console.log("requesting location permission");
+      console.log("image", image);
       const s = await Location.requestForegroundPermissionsAsync();
       console.log("got location permission")
       setStatus(s)
@@ -89,12 +101,13 @@ export default function App() {
     })();
   }, []);
 
+  /*
   useEffect(() => {
       const interval = setInterval(async () => {
         if (cameraRef) {
           const data = await cameraRef.current.takePictureAsync();
           console.log(data);
-          setImage(data.uri);
+          //setImage(data.uri);
           console.log("getting location")
           let location = await Location.getCurrentPositionAsync({});
           console.log("got location")
@@ -109,25 +122,37 @@ export default function App() {
       }, 5000);
       return () => clearInterval(interval);
     }, []);
-    const takePicture = async () => {
+  */
+  const takePicture = async () => {
     if (cameraRef) {
       try {
-        const data = await cameraRef.current.takePictureAsync();
-        console.log(data);
-        setImage(data.uri);
+        const data = await cameraRef.current.takePictureAsync({
+          base64: true
+        });
+        console.log("REAARANGING", data);
+        setImage(data);
+        const blob = await b64toBlob(data)
+        sendRequest({blob:data, uri: data.uri})
+        console.log("SUCCESSFULLY UPLOADED")
       } catch (error) {
+        console.log("FAILED UPLOAD")
         console.log(error);
       }
     }
   };
 
   const savePicture = async () => {
+    console.log("START SAVING PICTURE")
     if (image) {
+      console.log("HERE IS THE IMAGE")
+      console.log(image)
       try {
-        const asset = await MediaLibrary.createAssetAsync(image);
+        const asset = await MediaLibrary.createAssetAsync(image.uri);
+        console.log(asset)
         alert('Picture saved! 🎉');
         setImage(null);
         console.log('saved successfully');
+        //console.log('image', image);
       } catch (error) {
         console.log(error);
       }
@@ -204,11 +229,58 @@ export default function App() {
   );
 }
 
+// this function converts the generic JS ISO8601 date format to the specific format the AWS API wants
+function getAmzDate(dateStr) {
+  var chars = [":","-"];
+  for (var i=0;i<chars.length;i++) {
+    while (dateStr.indexOf(chars[i]) != -1) {
+      dateStr = dateStr.replace(chars[i],"");
+    }
+  }
+  dateStr = dateStr.split(".")[0] + "Z";
+  return dateStr;
+}
+
+// Need to make button to upload file 
+
+const config = {
+  method: 'PUT',
+  headers: { 
+    'X-Amz-Date': getAmzDate(new Date().toISOString()), 
+    'Authorization': 'AWS4-HMAC-SHA256 Credential=AKIA4SEW72LJH44RKOKM/20230102/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date, Signature=17070f06137b9817f36664651075d46b252ca8fac575f88b66ee981d79751317', 
+    'Content-Type': 'image/jpeg'
+  }
+};
+
+// Get image data
+
+async function sendRequest(data) {
+  console.log("CURRENT PROBLEM Before",data)
+  config.body = JSON.stringify({ image: data.blob });
+  console.log("CURRENT PROBLEM After",data)
+  let response
+  try {
+    const path = data.uri
+    response = await fetch("https://wotnjdu5ak.execute-api.us-east-1.amazonaws.com/prod/upload/roadphoto/" + 'image' + path.slice(path.length - 10), config);
+    console.log(response)
+    console.log("SUCCESS")
+    
+  } catch (error) {
+    console.log("QUERY ERROR");
+    console.log(error)
+  } try{ 
+    console.log("RESPONSE.DATA SUCCESS");
+    console.log(response)
+  } catch (error) {
+    console.log("RESPONSE.DATA ERROR")
+  }
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    paddingTop: Constants.statusBarHeight,
+    rddingTop: Constants.statusBarHeight,
     backgroundColor: '#000',
     padding: 8,
   },
