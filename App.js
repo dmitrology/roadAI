@@ -1,74 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Text, View, StyleSheet, Image } from 'react-native';
 import Constants from 'expo-constants';
 import { Camera, CameraType } from 'expo-camera';
 import * as Location from "expo-location";
 import * as MediaLibrary from 'expo-media-library';
 import Button from './src/components/Button';
-import axios from 'axios';
 
 const b64toBlob = (base64, type = 'application/octet-stream') => 
   fetch(`data:${type};base64,${base64}`).then(res => res.blob())
-
-const sendImage = async (image) => {
-  console.log("here")
-  console.log(image)
-  const formData = new FormData();
-  formData.append('image', {
-    uri: image.uri,
-    type: image.type,
-    name: image.fileName
-  });
-
-  let data
-
-  /*
-  try {
-    const response = await fetch('https://lnatchxqed.execute-api.us-east-1.amazonaws.com/roadDataReciever?fileName=' + image.uri, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      //body: formData
-    });
-    data = await response.json();
-    console.log("URLfromroadDataReciever", data.fileUploadURL)
-    const response2 = await fetch(data.fileUploadURL, {
-      method: 'PUT',
-      headers: { "Content-Type": "multipart/form-data" },
-      body: image.uri
-      //body: formData
-
-      
-    });
-
-  } catch (error) {
-    console.log("failed getting secure url: ", error);
-  }
-
-  try {
-    console.log("trying to upload")
-    // post the image direclty to the s3 bucket
-    await fetch(data.fileUploadURL, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "image/jpeg"
-      },
-      //Need to make a button 
-      body: image.uri
-    })
-    console.log("uploaded")
-  } catch(e) {
-    console.log("failed to upload image to s3: ", e)
-  }
-  */
- try {
-
- } catch {
-
- }
-};
-
 
 export default function App() {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
@@ -100,59 +39,35 @@ export default function App() {
       }
     })();
   }, []);
-
-  /*
-  useEffect(() => {
-      const interval = setInterval(async () => {
-        if (cameraRef) {
-          const data = await cameraRef.current.takePictureAsync();
-          console.log(data);
-          //setImage(data.uri);
-          console.log("getting location")
-          let location = await Location.getCurrentPositionAsync({});
-          console.log("got location")
-          try {
-            await sendImage(data)
-            // do something with the data
-          } catch (error) {
-            console.error(error);
-          }
-          //updateState(location);
-        }
-      }, 5000);
-      return () => clearInterval(interval);
-    }, []);
-  */
+  
   const takePicture = async () => {
     if (cameraRef) {
       try {
         const data = await cameraRef.current.takePictureAsync({
           base64: true
         });
-        console.log("REAARANGING", data);
         setImage(data);
-        const blob = await b64toBlob(data)
-        sendRequest({blob:data, uri: data.uri})
-        console.log("SUCCESSFULLY UPLOADED")
+        // TODO: Investigate blob, it is failing
+        // const blob = await b64toBlob(data)
+        sendRequest({blob: data, uri: data.uri})
+        console.log("Successfully uploaded image to AWS")
       } catch (error) {
-        console.log("FAILED UPLOAD")
+        console.log("Failed upload to AWS")
         console.log(error);
       }
     }
   };
 
   const savePicture = async () => {
-    console.log("START SAVING PICTURE")
+    console.log("start saving picture.")
     if (image) {
-      console.log("HERE IS THE IMAGE")
+      console.log("image is valid. proceeding to save image on device.")
       console.log(image)
       try {
         const asset = await MediaLibrary.createAssetAsync(image.uri);
         console.log(asset)
-        alert('Picture saved! 🎉');
         setImage(null);
         console.log('saved successfully');
-        //console.log('image', image);
       } catch (error) {
         console.log(error);
       }
@@ -241,8 +156,6 @@ function getAmzDate(dateStr) {
   return dateStr;
 }
 
-// Need to make button to upload file 
-
 const config = {
   method: 'PUT',
   headers: { 
@@ -252,19 +165,14 @@ const config = {
   }
 };
 
-// Get image data
-
 async function sendRequest(data) {
-  console.log("CURRENT PROBLEM Before",data)
   config.body = JSON.stringify({ image: data.blob });
-  console.log("CURRENT PROBLEM After",data)
   let response
   try {
     const path = data.uri
     response = await fetch("https://wotnjdu5ak.execute-api.us-east-1.amazonaws.com/prod/upload/roadphoto/" + 'image' + path.slice(path.length - 10), config);
     console.log(response)
-    console.log("SUCCESS")
-    
+    console.log("SUCCESSFULLY UPLOADED IMAGE TO AWS")
   } catch (error) {
     console.log("QUERY ERROR");
     console.log(error)
